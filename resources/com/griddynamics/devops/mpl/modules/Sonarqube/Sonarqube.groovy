@@ -129,11 +129,12 @@ dir(CFG.'workspace_root' ?: '.') {
                     returnStdout: true
                 ).trim()
 
-                def status = withEnv(["STATUS_JSON=${statusJson}"]){
-                sh(
-                    script: """python3 -c "import json,sys; print(json.loads('''${statusJson}''').get('task',{}).get('status','UNKNOWN'))" """,
-                    returnStdout: true
-                ).trim()
+                def status = 'UNKNOWN'
+                try {
+                    def json = new groovy.json.JsonSlurper().parseText(statusJson)
+                    status = json.task?.status ?: 'UNKNOWN'
+                } catch (e) {
+                    echo "[Sonarqube] WARNING: Failed to parse CE task status: ${e.message}"
                 }
                 echo "[Sonarqube] Analysis status: ${status}"
 
