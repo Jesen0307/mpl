@@ -74,6 +74,16 @@ def call(body) {
     post {
       always {
         MPLPostStepsRun('always')
+        script {
+          def sonarReports = fileExists 'target/sonar-reports/**'
+          if (sonarReports) {
+            archiveArtifacts artifacts: 'target/sonar-reports/**', fingerprint: true
+          }
+          def buildArtifacts = fileExists 'build/libs/*.jar'
+          if (buildArtifacts) {
+            archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+          }
+        }
       }
       success {
         MPLPostStepsRun('success')
