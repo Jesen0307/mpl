@@ -75,12 +75,10 @@ def call(body) {
       always {
         MPLPostStepsRun('always')
         script {
-          def sonarReports = fileExists 'target/sonar-reports/**'
-          if (sonarReports) {
+          if (fileExists('target/sonar-reports')) {
             archiveArtifacts artifacts: 'target/sonar-reports/**', fingerprint: true
           }
-          def buildArtifacts = fileExists 'build/libs/*.jar'
-          if (buildArtifacts) {
+          if (fileExists('build/libs')) {
             archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
           }
         }
