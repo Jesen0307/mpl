@@ -33,7 +33,7 @@ def call(body) {
     modules: [
       Checkout: [:],
       Build: [:],
-      Deploy: [:],
+      SAST: [:],
       Test: [:]
     ]
   ])
@@ -58,7 +58,7 @@ def call(body) {
           MPLModule()
         }
       }
-      stage( 'Deploy' ) {
+      stage( 'SAST' ) {
         when { expression { MPLModuleEnabled() } }
         steps {
           MPLModule()
