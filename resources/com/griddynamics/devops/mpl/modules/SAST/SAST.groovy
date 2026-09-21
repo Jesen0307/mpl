@@ -2,4 +2,4 @@
  * Common deploy module
  */
 
-MPLModule('Sonarqube', CFG)
+MPLModule('SAST/Sonarqube', CFG)
