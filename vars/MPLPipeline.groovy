@@ -75,8 +75,8 @@ def call(body) {
       always {
         MPLPostStepsRun('always')
         script {
-          if (fileExists('target/sonar-reports')) {
-            archiveArtifacts artifacts: 'target/sonar-reports/**', fingerprint: true
+          if (fileExists('target/sonar-reports/sonar_raw.json')) {
+            archiveArtifacts artifacts: 'target/sonar-reports/sonar_raw.json', fingerprint: true
           }
           if (fileExists('build/libs')) {
             archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
