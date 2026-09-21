@@ -15,7 +15,7 @@ if (!token) {
 }
 
 def toolName   = CFG.'tool_name' ?: 'SonarScanner'
-def scannerHome = tool name: toolName, type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+def scannerHome = tool (name: toolName, type: 'hudson.plugins.sonar.SonarRunnerInstallation')
 def scannerBin  = "${scannerHome}/bin/sonar-scanner"
 
 // 1. Prepare the embedded Python export script
@@ -129,11 +129,12 @@ dir(CFG.'workspace_root' ?: '.') {
                     returnStdout: true
                 ).trim()
 
-                def status = sh(
+                def status = withEnv(["STATUS_JSON=${statusJson}"]){
+                sh(
                     script: """python3 -c "import json,sys; print(json.loads('''${statusJson}''').get('task',{}).get('status','UNKNOWN'))" """,
                     returnStdout: true
                 ).trim()
-
+                }
                 echo "[Sonarqube] Analysis status: ${status}"
 
                 if (status == 'SUCCESS') {
