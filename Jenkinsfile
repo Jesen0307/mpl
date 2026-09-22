@@ -1,12 +1,8 @@
 @Library('mpl@master') _
 
 MPLPipeline {
-    agent {
-        docker {
-            image 'jesen0307/java-pipeline:latest'
-            args '--network sonarqube-fresh_sonarnet'
-        }
-    }
+    docker_args = '-u root:root --network sonarqube-fresh_sonarnet -v /tmp/jenkins-cache/.m2:/root/.m2 -v /tmp/jenkins-cache/.gradle:/root/.gradle'
+
     modules = [
         Checkout: [:],
         Build: [:],
@@ -17,6 +13,6 @@ MPLPipeline {
             output_dir: 'target/sonar-reports',
             java_binaries: 'build/classes/java/main,build/classes'
         ],
-        Test: [:]
+        SCA: [:]
     ]
 }
