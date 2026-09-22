@@ -30,7 +30,7 @@ dir(CFG.workdir ?: '.') {
                   -Dsonar.sources=src \
                   -Dsonar.host.url=${sonarHost} \
                   -Dsonar.token=${sonarToken} \
-                  -Dsonar.scanner.skipJreProvisioning=true \
+                  -Dsonar.scanner.skipJreProvisioning=false \
                   -Dsonar.java.binaries=${javaBinaries}
             """
         } else {
