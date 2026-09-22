@@ -22,8 +22,7 @@
 //
 
 /**
- * Basic MPL pipeline
- * Shows pipeline with basic stages and modules of the MPL library
+ * Basic MPL pipeline executing inside containerized environment
  *
  * @author Sergei Parshev <sparshev@griddynamics.com>
  */
@@ -31,7 +30,7 @@ def call(body) {
   def MPL = MPLPipelineConfig(body, [
     agent_label: '',
     docker_image: 'jesen0307/java-pipeline:latest',
-    docker_args: '-u root:root -v /tmp/jenkins-cache/.m2:/root/.m2',
+    docker_args: '-u root:root -v /tmp/jenkins-cache/.m2:/root/.m2 -v /tmp/jenkins-cache/.gradle:/root/.gradle',
     modules: [
       Checkout: [:],
       Build: [:],
@@ -42,12 +41,11 @@ def call(body) {
 
   pipeline {
     agent {
-      docker{
-        image MPL.docker_Image
-        label MPL.agent_Label
-        args MPL.docker_Args
+      docker {
+        image MPL.docker_image
+        label MPL.agent_label
+        args MPL.docker_args
       }
-      
     }
     options {
       skipDefaultCheckout(true)
@@ -81,12 +79,16 @@ def call(body) {
     post {
       always {
         MPLPostStepsRun('always')
-        script {
-          if (fileExists('target/sonar-reports/sonar_raw.json')) {
-            archiveArtifacts artifacts: 'target/sonar-reports/sonar_raw.json', fingerprint: true
-          }
-          if (fileExists('build/libs')) {
-            archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true
+        
+        // Wrap workspace checks in a node block to provide FilePath context
+        node(MPL.agent_label ?: 'built-in') {
+          script {
+            if (fileExists('target/sonar-reports/sonar_raw.json')) {
+              archiveArtifacts artifacts: 'target/sonar-reports/sonar_raw.json', fingerprint: true, allowEmptyArchive: true
+            }
+            if (fileExists('build/libs')) {
+              archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true, allowEmptyArchive: true
+            }
           }
         }
       }
