@@ -39,12 +39,17 @@ def call(body) {
     ]
   ])
 
+  // Retrieve configuration variables directly from the MPL config map
+  def dockerImage = MPL.config.docker_image
+  def agentLabel = MPL.config.agent_label
+  def dockerArgs = MPL.config.docker_args
+
   pipeline {
     agent {
       docker {
-        image MPL.dockerImage
-        label MPL.agentLabel
-        args MPL.dockerArgs
+        image dockerImage
+        label agentLabel
+        args dockerArgs
       }
     }
     options {
@@ -79,16 +84,12 @@ def call(body) {
     post {
       always {
         MPLPostStepsRun('always')
-        
-        // Wrap workspace checks in a node block to provide FilePath context
-        node(MPL.agent_label ?: 'built-in') {
-          script {
-            if (fileExists('target/sonar-reports/sonar_raw.json')) {
-              archiveArtifacts artifacts: 'target/sonar-reports/sonar_raw.json', fingerprint: true, allowEmptyArchive: true
-            }
-            if (fileExists('build/libs')) {
-              archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true, allowEmptyArchive: true
-            }
+        script {
+          if (fileExists('target/sonar-reports/sonar_raw.json')) {
+            archiveArtifacts artifacts: 'target/sonar-reports/sonar_raw.json', fingerprint: true, allowEmptyArchive: true
+          }
+          if (fileExists('build/libs')) {
+            archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true, allowEmptyArchive: true
           }
         }
       }
