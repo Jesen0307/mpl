@@ -1,5 +1,4 @@
 // Module: SCA
-// Handles Trivy FS scanning for ALL severity levels by default
 
 def outputDir = CFG.output_dir ?: 'target/sca-reports'
 def exitCode = CFG.exit_code ?: '0'
