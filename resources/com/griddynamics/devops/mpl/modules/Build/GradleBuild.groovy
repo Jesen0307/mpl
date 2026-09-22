@@ -1,13 +1,12 @@
-def jdkTool = tool(CFG.'jdk.version' ?: 'JDK 17')
-def gradleTool = tool(CFG.'gradle.tool_version' ?: 'Gradle 8')
+// Clean containerized execution replacing tool() and withEnv()
+sh 'chmod +x gradlew || true'
 
-withEnv([
-  "JAVA_HOME=${jdkTool}",
-  "PATH+JDK=${jdkTool}/bin",
-  "PATH+GRADLE=${gradleTool}/bin"
-]) {
-  sh 'chmod +x gradlew || true'
-  sh 'gradle --console=plain classes printRuntimeClasspath --no-daemon'
-}
+sh '''
+  if [ -f "./gradlew" ]; then
+    ./gradlew --console=plain classes printRuntimeClasspath --no-daemon
+  else
+    gradle --console=plain classes printRuntimeClasspath --no-daemon
+  fi
+'''
 
 OUT.build_tool = 'gradle'

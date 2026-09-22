@@ -30,17 +30,24 @@
 def call(body) {
   def MPL = MPLPipelineConfig(body, [
     agent_label: '',
+    docker_image: 'jesen0307/java-pipeline:latest',
+    docker_args: '-u root:root -v /tmp/jenkins-cache/.m2:/root/.m2',
     modules: [
       Checkout: [:],
       Build: [:],
       SAST: [:],
-      Test: [:]
+      SCA: [:]
     ]
   ])
 
   pipeline {
     agent {
-      label MPL.agentLabel
+      docker{
+        image MPL.docker_Image
+        label MPL.agent_Label
+        args MPL.docker_Args
+      }
+      
     }
     options {
       skipDefaultCheckout(true)
@@ -64,7 +71,7 @@ def call(body) {
           MPLModule()
         }
       }
-      stage( 'Test' ) {
+      stage( 'SCA' ) {
         when { expression { MPLModuleEnabled() } }
         steps {
           MPLModule()

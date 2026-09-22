@@ -14,9 +14,7 @@ if (!token) {
     error "[Sonarqube] ERROR: SonarQube token is required. Pass 'token' in CFG or set SONAR_TOKEN env var."
 }
 
-def toolName   = CFG.'tool_name' ?: 'SonarScanner'
-def scannerHome = tool (name: toolName, type: 'hudson.plugins.sonar.SonarRunnerInstallation')
-def scannerBin  = "${scannerHome}/bin/sonar-scanner"
+def scannerBin = 'sonar-scanner'
 
 // 1. Prepare the embedded Python export script
 def pyExportScript = '''
@@ -105,7 +103,7 @@ dir(CFG.'workspace_root' ?: '.') {
 
     echo "[Sonarqube] Starting SonarQube scan for project '${projectKey}' on ${hostUrl}"
 
-    // Run Scanner using global tool binary with timeout
+    // Run Scanner using container system binary with timeout
     timeout(time: 20, unit: 'MINUTES') {
         sh "${scannerBin} ${scanArgs.join(' ')} > '${outputDir}/sonar_scanner_stdout.log' 2>&1"
     }
