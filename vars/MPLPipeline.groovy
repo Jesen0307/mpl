@@ -42,9 +42,9 @@ def call(body) {
   pipeline {
     agent {
       docker {
-        image MPL.docker_image
-        label MPL.agent_label
-        args MPL.docker_args
+        image MPL.docker_Image
+        label MPL.agent_Label
+        args MPL.docker_Args
       }
     }
     options {
