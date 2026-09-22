@@ -1,5 +1,5 @@
 // Module: Sonarqube
-// Handles Maven and Gradle SonarQube scans and exports sonar_raw.json
+// Handles Maven and Gradle SonarQube scans and exports all security issues to sonar_raw.json
 
 def sonarHost   = CFG.sonar_host ?: 'http://sonarqube:9000'
 def sonarToken  = CFG.sonar_token ?: 'squ_a76c5e818a392cb07370af0fb874c9e3fe84ec90'
@@ -39,11 +39,44 @@ dir(CFG.workdir ?: '.') {
         }
     }
 
-    // Export findings to sonar_raw.json using the SonarQube API
-    echo "[Sonarqube] Fetching security issues and saving to ${outputDir}/sonar_raw.json..."
+    // Export all security issues with pagination
+    echo "[Sonarqube] Fetching all security issues and saving to ${outputDir}/sonar_raw.json..."
     sh """
-        curl -s -u "${sonarToken}:" \
-          "${sonarHost}/api/issues/search?componentKeys=${projectKey}&ps=500" \
-          -o "${outputDir}/sonar_raw.json"
+        python3 -c '
+import json, urllib.request, base64
+
+host = "${sonarHost}"
+token = "${sonarToken}"
+project_key = "${projectKey}"
+out_path = "${outputDir}/sonar_raw.json"
+
+page_size = 500
+page = 1
+all_issues = []
+
+auth_header = "Basic " + base64.b64encode(f"{token}:".encode()).decode()
+
+while True:
+    url = f"{host}/api/issues/search?componentKeys={project_key}&impactSoftwareQualities=SECURITY&ps={page_size}&p={page}"
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", auth_header)
+    
+    with urllib.request.urlopen(req) as resp:
+        data = json.loads(resp.read().decode())
+    
+    issues = data.get("issues", [])
+    all_issues.extend(issues)
+    
+    total = data.get("total", 0)
+    if not issues or page * page_size >= total:
+        break
+    page += 1
+
+result = {"total": len(all_issues), "issues": all_issues}
+with open(out_path, "w") as f:
+    json.dump(result, f, indent=2)
+
+print(f"[Sonarqube] Successfully exported {len(all_issues)} security issues to {out_path}")
+'
     """
 }
