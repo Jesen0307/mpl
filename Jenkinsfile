@@ -8,6 +8,7 @@ MPLPipeline {
         Build: [:],
         SAST: [
             project_key: 'VulnerableApp2',
+            project_name: 'VulnerableApp2',
             sonar_host: 'http://sonarqube:9000',
             sonar_token: 'squ_a76c5e818a392cb07370af0fb874c9e3fe84ec90',
             output_dir: 'target/sonar-reports',
