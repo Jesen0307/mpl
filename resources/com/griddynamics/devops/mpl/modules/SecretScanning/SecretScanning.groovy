@@ -10,10 +10,11 @@ echo "[SecretScanning] Running Trufflehog secret scanner..."
 // Run Trufflehog filesystem scan outputting JSON format
 // returnStatus: true prevents Jenkins from failing prematurely before archiving reports
 def statusCode = sh(
-    script: """
-        trufflehog filesystem . \
-          --json \
-          --no-verification > ${outputDir}/trufflehog_raw.json
+    script: """#!/bin/bash
+        trufflehog filesystem . \\
+          --json \\
+          --no-verification \\
+          --exclude-dirs="build,target,.git,node_modules" > ${outputDir}/trufflehog_raw.json
     """,
     returnStatus: true
 )
