@@ -14,7 +14,7 @@ def statusCode = sh(
         trufflehog filesystem . \\
           --json \\
           --no-verification \\
-          --exclude-dirs="build,target,.git,node_modules" > ${outputDir}/trufflehog_raw.json
+          --exclude-paths="build,target,.git,node_modules" > ${outputDir}/trufflehog_raw.json
     """,
     returnStatus: true
 )
