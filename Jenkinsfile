@@ -14,6 +14,10 @@ MPLPipeline {
             output_dir: 'target/sonar-reports',
             java_binaries: 'build/classes/java/main,build/classes'
         ],
-        SCA: [:]
+        SCA: [
+            scan_target: '.',
+            output_dir: 'target/sca-reports',
+            exit_code: '0'
+        ]
     ]
 }

@@ -1,4 +1,3 @@
-//
 // Copyright (c) 2018 Grid Dynamics International, Inc. All Rights Reserved
 // https://www.griddynamics.com
 //
@@ -87,6 +86,9 @@ def call(body) {
         script {
           if (fileExists('target/sonar-reports/sonar_raw.json')) {
             archiveArtifacts artifacts: 'target/sonar-reports/sonar_raw.json', fingerprint: true, allowEmptyArchive: true
+          }
+          if (fileExists('target/sca-reports/trivy_raw.json')) {
+            archiveArtifacts artifacts: 'target/sca-reports/trivy_raw.json', fingerprint: true, allowEmptyArchive: true
           }
           if (fileExists('build/libs')) {
             archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true, allowEmptyArchive: true
