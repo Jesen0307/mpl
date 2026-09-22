@@ -18,6 +18,10 @@ MPLPipeline {
             scan_target: '.',
             output_dir: 'target/sca-reports',
             exit_code: '0'
+        ],
+        SecretScanning: [
+            scan_target: '.',
+            output_dir: 'target/secret-reports'
         ]
     ]
 }

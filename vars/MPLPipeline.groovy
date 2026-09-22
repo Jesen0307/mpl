@@ -34,7 +34,8 @@ def call(body) {
       Checkout: [:],
       Build: [:],
       SAST: [:],
-      SCA: [:]
+      SCA: [:],
+      SecretScanning: [:]
     ]
   ])
 
@@ -79,6 +80,12 @@ def call(body) {
           MPLModule()
         }
       }
+      stage( 'SecretScanning' ) {
+        when { expression { MPLModuleEnabled() } }
+        steps {
+          MPLModule()
+        }
+      }
     }
     post {
       always {
@@ -89,6 +96,9 @@ def call(body) {
           }
           if (fileExists('target/sca-reports/trivy_raw.json')) {
             archiveArtifacts artifacts: 'target/sca-reports/trivy_raw.json', fingerprint: true, allowEmptyArchive: true
+          }
+          if (fileExists('target/secret-reports/trufflehog_raw.json')) {
+            archiveArtifacts artifacts: 'target/secret-reports/trufflehog_raw.json', fingerprint: true, allowEmptyArchive: true
           }
           if (fileExists('build/libs')) {
             archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true, allowEmptyArchive: true
