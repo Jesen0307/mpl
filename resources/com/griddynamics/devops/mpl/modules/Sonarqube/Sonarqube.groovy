@@ -39,7 +39,7 @@ dir(CFG.workdir ?: '.') {
         }
     }
 
-    // Export all security issues with pagination
+    // Export all security issues in standard SonarQube API JSON structure
     echo "[Sonarqube] Fetching all security issues and saving to ${outputDir}/sonar.json..."
     sh """
         python3 -c '
@@ -53,17 +53,23 @@ out_path = "${outputDir}/sonar.json"
 page_size = 500
 page = 1
 all_issues = []
+base_payload = {}
 
 auth_header = "Basic " + base64.b64encode(f"{token}:".encode()).decode()
 
 while True:
-    url = f"{host}/api/issues/search?componentKeys={project_key}&impactSoftwareQualities=SECURITY&ps={page_size}&p={page}"
+    # Query both legacy types and modern impactSoftwareQualities for backward/forward compatibility
+    url = f"{host}/api/issues/search?componentKeys={project_key}&impactSoftwareQualities=SECURITY&types=VULNERABILITY,SECURITY_HOTSPOT&ps={page_size}&p={page}"
     req = urllib.request.Request(url)
     req.add_header("Authorization", auth_header)
     
     with urllib.request.urlopen(req) as resp:
         data = json.loads(resp.read().decode())
     
+    if page == 1:
+        # Keep native response metadata (components, rules, users) required by DefectDojo
+        base_payload = data
+
     issues = data.get("issues", [])
     all_issues.extend(issues)
     
@@ -72,9 +78,12 @@ while True:
         break
     page += 1
 
-result = {"total": len(all_issues), "issues": all_issues}
+# Overwrite issues array with full paginated list while preserving top-level native keys
+base_payload["issues"] = all_issues
+base_payload["total"] = len(all_issues)
+
 with open(out_path, "w") as f:
-    json.dump(result, f, indent=2)
+    json.dump(base_payload, f, indent=2)
 
 print(f"[Sonarqube] Successfully exported {len(all_issues)} security issues to {out_path}")
 '
