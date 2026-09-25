@@ -91,10 +91,10 @@ def call(body) {
       always {
         MPLPostStepsRun('always')
         script {
-          if (fileExists('target/sonar-reports/sonar_raw.json')) {
+          if (fileExists('target/sonar-reports/sonar.json')) {
             archiveArtifacts artifacts: 'target/sonar-reports/sonar.json', fingerprint: true, allowEmptyArchive: true
           }
-          if (fileExists('target/sca-reports/trivy_raw.json')) {
+          if (fileExists('target/sca-reports/trivy.json')) {
             archiveArtifacts artifacts: 'target/sca-reports/trivy.json', fingerprint: true, allowEmptyArchive: true
           }
           if (fileExists('target/secret-reports/trufflehog.json')) {
