@@ -32,6 +32,7 @@ def call(body) {
     docker_args: '-u root:root -v /tmp/jenkins-cache/.m2:/root/.m2 -v /tmp/jenkins-cache/.gradle:/root/.gradle',
     defectdojo_url: 'http://defectdojo-nginx:8080',
     defectdojo_credentials_id: 'DEFECTDOJO_API_KEY',
+    product_type_name: 'Research and Development',
     product_name: 'VulnerableApp',
     engagement_name: 'CI/CD Pipeline',
     modules: [
@@ -49,6 +50,7 @@ def call(body) {
   def dockerArgs = MPL.config.docker_args
   def ddUrl = MPL.config.defectdojo_url
   def ddCredsId = MPL.config.defectdojo_credentials_id
+  def ddProductType = MPL.config.product_type_name
   def ddProduct = MPL.config.product_name
   def ddEngagement = MPL.config.engagement_name
 
@@ -99,7 +101,6 @@ def call(body) {
       always {
         MPLPostStepsRun('always')
         script {
-          // Keep existing artifact archiving untouched
           if (fileExists('target/sonar-reports/sonar.json')) {
             archiveArtifacts artifacts: 'target/sonar-reports/sonar.json', fingerprint: true, allowEmptyArchive: true
           }
@@ -116,58 +117,70 @@ def call(body) {
           // DefectDojo Automatic Scan Ingestion
           withCredentials([string(credentialsId: ddCredsId, variable: 'DD_TOKEN')]) {
             
-            // 1. Upload SonarQube SAST Report
-            if (fileExists('target/sonar-reports/sonar.json')) {
-              echo "Uploading SonarQube report to DefectDojo..."
-              sh """
-                curl -s -X POST "${ddUrl}/api/v2/import-scan/" \\
-                  -H "Authorization: Token ${DD_TOKEN}" \\
-                  -H "Content-Type: multipart/form-data" \\
-                  -F "active=true" \\
-                  -F "verified=true" \\
-                  -F "scan_type=SonarQube Scan" \\
-                  -F "product_name=${ddProduct}" \\
-                  -F "engagement_name=${ddEngagement}" \\
-                  -F "auto_create_context=true" \\
-                  -F "close_old_findings=true" \\
-                  -F "file=@target/sonar-reports/sonar.json"
-              """
-            }
+            // Set environment variables for shell execution to eliminate Groovy string interpolation warnings
+            withEnv([
+              "DD_URL=${ddUrl}",
+              "DD_PRODUCT_TYPE=${ddProductType}",
+              "DD_PRODUCT=${ddProduct}",
+              "DD_ENGAGEMENT=${ddEngagement}"
+            ]) {
 
-            // 2. Upload Trivy SCA Report
-            if (fileExists('target/sca-reports/trivy.json')) {
-              echo "Uploading Trivy report to DefectDojo..."
-              sh """
-                curl -s -X POST "${ddUrl}/api/v2/import-scan/" \\
-                  -H "Authorization: Token ${DD_TOKEN}" \\
-                  -H "Content-Type: multipart/form-data" \\
-                  -F "active=true" \\
-                  -F "verified=true" \\
-                  -F "scan_type=Trivy Scan" \\
-                  -F "product_name=${ddProduct}" \\
-                  -F "engagement_name=${ddEngagement}" \\
-                  -F "auto_create_context=true" \\
-                  -F "close_old_findings=true" \\
-                  -F "file=@target/sca-reports/trivy.json"
-              """
-            }
+              // 1. Upload SonarQube SAST Report
+              if (fileExists('target/sonar-reports/sonar.json')) {
+                echo "Uploading SonarQube report to DefectDojo..."
+                sh '''
+                  curl -s -X POST "${DD_URL}/api/v2/import-scan/" \
+                    -H "Authorization: Token ${DD_TOKEN}" \
+                    -H "Content-Type: multipart/form-data" \
+                    -F "active=true" \
+                    -F "verified=true" \
+                    -F "scan_type=SonarQube Scan" \
+                    -F "product_type_name=${DD_PRODUCT_TYPE}" \
+                    -F "product_name=${DD_PRODUCT}" \
+                    -F "engagement_name=${DD_ENGAGEMENT}" \
+                    -F "auto_create_context=true" \
+                    -F "close_old_findings=true" \
+                    -F "file=@target/sonar-reports/sonar.json"
+                '''
+              }
 
-            // 3. Upload TruffleHog Secrets Report
-            if (fileExists('target/secret-reports/trufflehog.json')) {
-              echo "Uploading TruffleHog report to DefectDojo..."
-              sh """
-                curl -s -X POST "${ddUrl}/api/v2/import-scan/" \\
-                  -H "Authorization: Token ${DD_TOKEN}" \\
-                  -H "Content-Type: multipart/form-data" \\
-                  -F "active=true" \\
-                  -F "verified=true" \\
-                  -F "scan_type=Trufflehog Scan" \\
-                  -F "product_name=${ddProduct}" \\
-                  -F "engagement_name=${ddEngagement}" \\
-                  -F "auto_create_context=true" \\
-                  -F "close_old_findings=true" \\
-                  -F "file=@target/secret-reports/trufflehog.json"
-              """
+              // 2. Upload Trivy SCA Report
+              if (fileExists('target/sca-reports/trivy.json')) {
+                echo "Uploading Trivy report to DefectDojo..."
+                sh '''
+                  curl -s -X POST "${DD_URL}/api/v2/import-scan/" \
+                    -H "Authorization: Token ${DD_TOKEN}" \
+                    -H "Content-Type: multipart/form-data" \
+                    -F "active=true" \
+                    -F "verified=true" \
+                    -F "scan_type=Trivy Scan" \
+                    -F "product_type_name=${DD_PRODUCT_TYPE}" \
+                    -F "product_name=${DD_PRODUCT}" \
+                    -F "engagement_name=${DD_ENGAGEMENT}" \
+                    -F "auto_create_context=true" \
+                    -F "close_old_findings=true" \
+                    -F "file=@target/sca-reports/trivy.json"
+                '''
+              }
+
+              // 3. Upload TruffleHog Secrets Report
+              if (fileExists('target/secret-reports/trufflehog.json')) {
+                echo "Uploading TruffleHog report to DefectDojo..."
+                sh '''
+                  curl -s -X POST "${DD_URL}/api/v2/import-scan/" \
+                    -H "Authorization: Token ${DD_TOKEN}" \
+                    -H "Content-Type: multipart/form-data" \
+                    -F "active=true" \
+                    -F "verified=true" \
+                    -F "scan_type=Trufflehog Scan" \
+                    -F "product_type_name=${DD_PRODUCT_TYPE}" \
+                    -F "product_name=${DD_PRODUCT}" \
+                    -F "engagement_name=${DD_ENGAGEMENT}" \
+                    -F "auto_create_context=true" \
+                    -F "close_old_findings=true" \
+                    -F "file=@target/secret-reports/trufflehog.json"
+                '''
+              }
             }
           }
         }
