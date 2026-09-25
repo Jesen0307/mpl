@@ -97,7 +97,7 @@ def call(body) {
           if (fileExists('target/sca-reports/trivy_raw.json')) {
             archiveArtifacts artifacts: 'target/sca-reports/trivy.json', fingerprint: true, allowEmptyArchive: true
           }
-          if (fileExists('target/secret-reports/trufflehog_raw.json')) {
+          if (fileExists('target/secret-reports/trufflehog.json')) {
             archiveArtifacts artifacts: 'target/secret-reports/trufflehog.json', fingerprint: true, allowEmptyArchive: true
           }
           if (fileExists('build/libs')) {

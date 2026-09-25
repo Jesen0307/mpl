@@ -5,15 +5,20 @@ def outputDir = 'target/secret-reports'
 
 sh "mkdir -p ${outputDir}"
 
-echo "[SecretScanning] Running Trufflehog git scanner"
+// Verify that the repository has Git history available before running
+if (!fileExists('.git')) {
+    echo "[SecretScanning] WARNING: No .git directory found in ${env.WORKSPACE}. Trufflehog git scan requires a valid Git repository."
+    return
+}
 
-// Run Trufflehog git scan on the local repo outputting JSON format
+echo "[SecretScanning] Running Trufflehog git scanner on workspace: ${env.WORKSPACE}"
+
+// Run Trufflehog git scan including both verified and unverified secrets
 // returnStatus: true prevents Jenkins from failing prematurely before archiving reports
 def statusCode = sh(
     script: """#!/bin/bash
-        trufflehog git file://\$PWD \\
-          --json \\
-          --no-verification > ${outputDir}/trufflehog.json
+        trufflehog git file://${env.WORKSPACE} \\
+          --json > ${outputDir}/trufflehog.json
     """,
     returnStatus: true
 )
