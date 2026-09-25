@@ -30,6 +30,10 @@ def call(body) {
     agent_label: '',
     docker_image: 'jesen0307/java-pipeline:latest',
     docker_args: '-u root:root -v /tmp/jenkins-cache/.m2:/root/.m2 -v /tmp/jenkins-cache/.gradle:/root/.gradle',
+    defectdojo_url: 'http://defectdojo-nginx:8080',
+    defectdojo_credentials_id: 'DEFECTDOJO_API_KEY',
+    product_name: 'VulnerableApp',
+    engagement_name: 'CI/CD Pipeline',
     modules: [
       Checkout: [:],
       Build: [:],
@@ -43,6 +47,10 @@ def call(body) {
   def dockerImage = MPL.config.docker_image
   def agentLabel = MPL.config.agent_label
   def dockerArgs = MPL.config.docker_args
+  def ddUrl = MPL.config.defectdojo_url
+  def ddCredsId = MPL.config.defectdojo_credentials_id
+  def ddProduct = MPL.config.product_name
+  def ddEngagement = MPL.config.engagement_name
 
   pipeline {
     agent {
@@ -91,6 +99,7 @@ def call(body) {
       always {
         MPLPostStepsRun('always')
         script {
+          // Keep existing artifact archiving untouched
           if (fileExists('target/sonar-reports/sonar.json')) {
             archiveArtifacts artifacts: 'target/sonar-reports/sonar.json', fingerprint: true, allowEmptyArchive: true
           }
@@ -102,6 +111,64 @@ def call(body) {
           }
           if (fileExists('build/libs')) {
             archiveArtifacts artifacts: 'build/libs/*.jar', fingerprint: true, allowEmptyArchive: true
+          }
+
+          // DefectDojo Automatic Scan Ingestion
+          withCredentials([string(credentialsId: ddCredsId, variable: 'DD_TOKEN')]) {
+            
+            // 1. Upload SonarQube SAST Report
+            if (fileExists('target/sonar-reports/sonar.json')) {
+              echo "Uploading SonarQube report to DefectDojo..."
+              sh """
+                curl -s -X POST "${ddUrl}/api/v2/import-scan/" \\
+                  -H "Authorization: Token ${DD_TOKEN}" \\
+                  -H "Content-Type: multipart/form-data" \\
+                  -F "active=true" \\
+                  -F "verified=true" \\
+                  -F "scan_type=SonarQube Scan" \\
+                  -F "product_name=${ddProduct}" \\
+                  -F "engagement_name=${ddEngagement}" \\
+                  -F "auto_create_context=true" \\
+                  -F "close_old_findings=true" \\
+                  -F "file=@target/sonar-reports/sonar.json"
+              """
+            }
+
+            // 2. Upload Trivy SCA Report
+            if (fileExists('target/sca-reports/trivy.json')) {
+              echo "Uploading Trivy report to DefectDojo..."
+              sh """
+                curl -s -X POST "${ddUrl}/api/v2/import-scan/" \\
+                  -H "Authorization: Token ${DD_TOKEN}" \\
+                  -H "Content-Type: multipart/form-data" \\
+                  -F "active=true" \\
+                  -F "verified=true" \\
+                  -F "scan_type=Trivy Scan" \\
+                  -F "product_name=${ddProduct}" \\
+                  -F "engagement_name=${ddEngagement}" \\
+                  -F "auto_create_context=true" \\
+                  -F "close_old_findings=true" \\
+                  -F "file=@target/sca-reports/trivy.json"
+              """
+            }
+
+            // 3. Upload TruffleHog Secrets Report
+            if (fileExists('target/secret-reports/trufflehog.json')) {
+              echo "Uploading TruffleHog report to DefectDojo..."
+              sh """
+                curl -s -X POST "${ddUrl}/api/v2/import-scan/" \\
+                  -H "Authorization: Token ${DD_TOKEN}" \\
+                  -H "Content-Type: multipart/form-data" \\
+                  -F "active=true" \\
+                  -F "verified=true" \\
+                  -F "scan_type=Trufflehog Scan" \\
+                  -F "product_name=${ddProduct}" \\
+                  -F "engagement_name=${ddEngagement}" \\
+                  -F "auto_create_context=true" \\
+                  -F "close_old_findings=true" \\
+                  -F "file=@target/secret-reports/trufflehog.json"
+              """
+            }
           }
         }
       }
