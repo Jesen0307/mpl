@@ -1,5 +1,5 @@
 // Module: Sonarqube
-// Handles Maven and Gradle SonarQube scans and exports all security-tagged issues to sonar.json
+// Handles Maven and Gradle SonarQube scans and exports exact security findings to sonar.json
 
 def sonarHost   = CFG.sonar_host ?: 'http://sonarqube:9000'
 def sonarToken  = CFG.sonar_token ?: 'squ_a76c5e818a392cb07370af0fb874c9e3fe84ec90'
@@ -39,8 +39,8 @@ dir(CFG.workdir ?: '.') {
         }
     }
 
-    // Export all security-tagged issues (Vulnerabilities + Security Code Smells) for DefectDojo import
-    echo "[Sonarqube] Fetching security-tagged issues and saving to ${outputDir}/sonar.json..."
+    // Export exact security findings (Vulnerabilities & Security Quality Impacts) for DefectDojo import
+    echo "[Sonarqube] Fetching security issues and saving to ${outputDir}/sonar.json..."
     sh """
         python3 -c '
 import json, urllib.request, urllib.error, base64
@@ -70,7 +70,7 @@ def fetch_api(endpoint):
             print(f"[Sonarqube] API error {e.code} on {url}")
             break
 
-        if page == 1:
+        if page == 1 and not base_response:
             base_response = data
 
         items = data.get("issues", [])
@@ -85,18 +85,27 @@ def fetch_api(endpoint):
 
     return base_response, all_items
 
-# Fetch vulnerabilities OR security-tagged findings
-sec_tags = "security,cwe,owasp-a1,owasp-a2,owasp-a3,owasp-a4,owasp-a5,owasp-a6,owasp-a7,owasp-a8,owasp-a9,owasp-a10,sans-top25"
-base_payload, issues = fetch_api(f"/api/issues/search?componentKeys={project_key}&tags={sec_tags}&statuses=OPEN,CONFIRMED,REOPENED")
+# Query 1: Fetch items with SECURITY software quality impact
+base_payload, issues_sq = fetch_api(f"/api/issues/search?componentKeys={project_key}&impactSoftwareQualities=SECURITY&statuses=OPEN,CONFIRMED,REOPENED")
+
+# Query 2: Fetch items categorized under VULNERABILITY type
+_, issues_vuln = fetch_api(f"/api/issues/search?componentKeys={project_key}&types=VULNERABILITY&statuses=OPEN,CONFIRMED,REOPENED")
+
+# Deduplicate by issue key
+dedup_map = {}
+for issue in issues_sq + issues_vuln:
+    dedup_map[issue["key"]] = issue
+
+final_issues = list(dedup_map.values())
 
 # Preserve native API response structure required by DefectDojo parser
-base_payload["issues"] = issues
-base_payload["total"] = len(issues)
+base_payload["issues"] = final_issues
+base_payload["total"] = len(final_issues)
 
 with open(out_path, "w") as f:
     json.dump(base_payload, f, indent=2)
 
-print(f"[Sonarqube] Successfully exported {len(issues)} security-tagged issues to {out_path}")
+print(f"[Sonarqube] Successfully exported {len(final_issues)} security issues to {out_path}")
 '
     """
 }
