@@ -13,7 +13,7 @@ dir(CFG.workdir ?: '.') {
     timeout(time: 15, unit: 'MINUTES') {
         echo "[SCA] Running Trivy FS scan (all severities)..."
         sh """
-            trivy fs --scanners vuln . \
+            trivy fs --scanners vuln \
               ${severityArg} \
               --exit-code ${exitCode} \
               --format json \
