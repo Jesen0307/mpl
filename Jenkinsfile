@@ -3,6 +3,10 @@
 MPLPipeline {
     docker_args = '-u root:root --network sonarqube-fresh_sonarnet -v /tmp/jenkins-cache/.m2:/root/.m2 -v /tmp/jenkins-cache/.gradle:/root/.gradle'
 
+    product_type_name = 'Research and Development' 
+    product_name      = 'VulnerableApp3'
+    engagement_name   = 'Testing'
+
     modules = [
         Checkout: [:],
         Build: [:],

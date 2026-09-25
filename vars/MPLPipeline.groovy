@@ -33,7 +33,7 @@ def call(body) {
     defectdojo_url: 'http://defectdojo-nginx:8080',
     defectdojo_credentials_id: 'DEFECTDOJO_API_KEY',
     product_type_name: 'Research and Development',
-    product_name: 'VulnerableApp',
+    product_name: env.JOB_BASE_NAME,
     engagement_name: 'CI/CD Pipeline',
     modules: [
       Checkout: [:],
@@ -44,7 +44,6 @@ def call(body) {
     ]
   ])
 
-  // Retrieve configuration variables directly from the MPL config map
   def dockerImage = MPL.config.docker_image
   def agentLabel = MPL.config.agent_label
   def dockerArgs = MPL.config.docker_args
