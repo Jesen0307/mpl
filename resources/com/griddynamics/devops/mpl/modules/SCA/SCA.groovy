@@ -17,7 +17,7 @@ dir(CFG.workdir ?: '.') {
               ${severityArg} \
               --exit-code ${exitCode} \
               --format json \
-              --output ${outputDir}/trivy_raw.json \
+              --output ${outputDir}/trivy.json \
               ${scanTarget}
         """
     }

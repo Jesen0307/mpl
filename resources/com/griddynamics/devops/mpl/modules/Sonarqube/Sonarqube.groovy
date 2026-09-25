@@ -1,5 +1,5 @@
 // Module: Sonarqube
-// Handles Maven and Gradle SonarQube scans and exports all security issues to sonar_raw.json
+// Handles Maven and Gradle SonarQube scans and exports all security issues to sonar.json
 
 def sonarHost   = CFG.sonar_host ?: 'http://sonarqube:9000'
 def sonarToken  = CFG.sonar_token ?: 'squ_a76c5e818a392cb07370af0fb874c9e3fe84ec90'
@@ -40,7 +40,7 @@ dir(CFG.workdir ?: '.') {
     }
 
     // Export all security issues with pagination
-    echo "[Sonarqube] Fetching all security issues and saving to ${outputDir}/sonar_raw.json..."
+    echo "[Sonarqube] Fetching all security issues and saving to ${outputDir}/sonar.json..."
     sh """
         python3 -c '
 import json, urllib.request, base64
@@ -48,7 +48,7 @@ import json, urllib.request, base64
 host = "${sonarHost}"
 token = "${sonarToken}"
 project_key = "${projectKey}"
-out_path = "${outputDir}/sonar_raw.json"
+out_path = "${outputDir}/sonar.json"
 
 page_size = 500
 page = 1
