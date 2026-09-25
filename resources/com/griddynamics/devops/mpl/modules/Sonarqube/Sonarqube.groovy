@@ -39,53 +39,83 @@ dir(CFG.workdir ?: '.') {
         }
     }
 
-    // Export all security issues in standard SonarQube API JSON structure
+    // Export all security vulnerabilities and hotspots in standard SonarQube API format for DefectDojo
     echo "[Sonarqube] Fetching all security issues and saving to ${outputDir}/sonar.json..."
     sh """
         python3 -c '
-import json, urllib.request, base64
+import json, urllib.request, urllib.error, base64
 
 host = "${sonarHost}"
 token = "${sonarToken}"
 project_key = "${projectKey}"
 out_path = "${outputDir}/sonar.json"
 
-page_size = 500
-page = 1
-all_issues = []
-base_payload = {}
-
 auth_header = "Basic " + base64.b64encode(f"{token}:".encode()).decode()
 
-while True:
-    # Query both legacy types and modern impactSoftwareQualities for backward/forward compatibility
-    url = f"{host}/api/issues/search?componentKeys={project_key}&impactSoftwareQualities=SECURITY&types=VULNERABILITY,SECURITY_HOTSPOT&ps={page_size}&p={page}"
-    req = urllib.request.Request(url)
-    req.add_header("Authorization", auth_header)
-    
-    with urllib.request.urlopen(req) as resp:
-        data = json.loads(resp.read().decode())
-    
-    if page == 1:
-        # Keep native response metadata (components, rules, users) required by DefectDojo
-        base_payload = data
+def fetch_api(endpoint):
+    page = 1
+    page_size = 500
+    all_items = []
+    base_response = {}
 
-    issues = data.get("issues", [])
-    all_issues.extend(issues)
-    
-    total = data.get("total", 0)
-    if not issues or page * page_size >= total:
-        break
-    page += 1
+    while True:
+        url = f"{host}{endpoint}&ps={page_size}&p={page}"
+        req = urllib.request.Request(url)
+        req.add_header("Authorization", auth_header)
+        
+        try:
+            with urllib.request.urlopen(req) as resp:
+                data = json.loads(resp.read().decode())
+        except urllib.error.HTTPError as e:
+            print(f"[Sonarqube] API error {e.code} on {url}")
+            break
 
-# Overwrite issues array with full paginated list while preserving top-level native keys
-base_payload["issues"] = all_issues
-base_payload["total"] = len(all_issues)
+        if page == 1:
+            base_response = data
+
+        # Get items key ("issues" or "hotspots")
+        items = data.get("issues", data.get("hotspots", []))
+        all_items.extend(items)
+
+        paging = data.get("paging", {})
+        total = paging.get("total", data.get("total", 0))
+
+        if not items or page * page_size >= total:
+            break
+        page += 1
+
+    return base_response, all_items
+
+# 1. Fetch Vulnerabilities
+base_payload, vulnerabilities = fetch_api(f"/api/issues/search?componentKeys={project_key}&types=VULNERABILITY")
+
+# 2. Fetch Security Hotspots
+_, hotspots = fetch_api(f"/api/hotspots/search?project={project_key}")
+
+# Convert Hotspots structure to align with Issues structure for DefectDojo parsing
+converted_hotspots = []
+for h in hotspots:
+    converted_hotspots.append({
+        "key": h.get("key"),
+        "rule": h.get("ruleKey"),
+        "severity": h.get("vulnerabilityProbability", "MEDIUM"),
+        "component": h.get("component"),
+        "line": h.get("line"),
+        "message": h.get("message"),
+        "type": "SECURITY_HOTSPOT",
+        "status": h.get("status")
+    })
+
+all_findings = vulnerabilities + converted_hotspots
+
+# Preserve native API response structure required by DefectDojo parser
+base_payload["issues"] = all_findings
+base_payload["total"] = len(all_findings)
 
 with open(out_path, "w") as f:
     json.dump(base_payload, f, indent=2)
 
-print(f"[Sonarqube] Successfully exported {len(all_issues)} security issues to {out_path}")
+print(f"[Sonarqube] Successfully exported {len(all_findings)} security findings ({len(vulnerabilities)} vulnerabilities, {len(converted_hotspots)} hotspots) to {out_path}")
 '
     """
 }
