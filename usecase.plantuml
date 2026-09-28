@@ -1,0 +1,36 @@
+@startuml
+skinparam DefaultTextAlignment center
+skinparam ActivityBackgroundColor #F9F9F9
+skinparam ActivityBorderColor #333333
+skinparam ArrowColor #333333
+skinparam DiamondBackgroundColor #FFF0F5
+skinparam DiamondBorderColor #C71585
+
+title Alur Kerja Sistem Agentic Multi-Tool SAST Berbasis MCP dan Jenkins
+
+start
+
+repeat
+  :Trigger Pipeline;
+  :Build Aplikasi;
+
+  split
+     :SonarQube Scan;
+  split again
+     :Semgrep Scan;
+  end split
+
+  :Deduplication & Categorization;
+  :Artifact Retrieval;
+  :Contextual Project Mapping;
+  :Reasoning & Triage;
+  :Actionable Proposal & Human-in-the-Loop Validation;
+  :Automated Remediation & Push to Branch;
+  :Re-triggering & Convergence Check;
+
+repeat while (Quality Gate Failed atau ada blocking Semgrep?) is (Ya) not (Tidak)
+
+:Terminasi Alur Kerja;
+stop
+
+@enduml

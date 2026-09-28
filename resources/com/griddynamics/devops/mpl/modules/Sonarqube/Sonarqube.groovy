@@ -2,9 +2,9 @@
 // Handles Maven and Gradle SonarQube scans and exports exact security findings to sonar.json
 
 def sonarHost   = CFG.sonar_host ?: 'http://sonarqube:9000'
-def sonarToken  = CFG.sonar_token ?: 'squ_a76c5e818a392cb07370af0fb874c9e3fe84ec90'
+def sonarToken  = CFG.sonar_token ?: env.SONAR_TOKEN ?: error('[Sonarqube] Missing sonar_token! Provide it in the SAST configuration or set the SONAR_TOKEN environment variable.')
 def projectKey  = CFG.project_key ?: env.JOB_BASE_NAME
-def projectName = CFG.project_name ?: env.JOB_BASE_NAME
+def projectName = CFG.projectName ?: env.JOB_BASE_NAME
 def outputDir   = CFG.output_dir ?: 'target/sonar-reports'
 
 dir(CFG.workdir ?: '.') {
@@ -39,7 +39,7 @@ dir(CFG.workdir ?: '.') {
         }
     }
 
-    // Export exact security findings (Vulnerabilities & Security Quality Impacts) for DefectDojo import
+    // Export security findings 
     echo "[Sonarqube] Fetching security issues and saving to ${outputDir}/sonar.json..."
     sh """
         python3 -c '
